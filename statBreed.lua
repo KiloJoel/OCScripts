@@ -7,6 +7,7 @@ inventory = component.inventory_controller
 
 parentName = "reed"
 parentStats = {growth=0,gain=0,resistance=31}
+invClearCounter = 0
 
 
 function safeMove(move)
@@ -33,62 +34,77 @@ function useItemInSlot(slotNum)
 end
 
 function checkInitialParent()
-    scan = component.geolyzer.analyze(sides.down)
-    parentName = scan["crop:name"]
-    parentStats.growth = scan["crop:growth"]
-    parentStats.gain = scan["crop:growth"]
-    parentStats.resistance = scan["crop:resistance"]
+  scan = component.geolyzer.analyze(sides.down)
+  parentName = scan["crop:name"]
+  parentStats.growth = scan["crop:growth"]
+  parentStats.gain = scan["crop:growth"]
+  parentStats.resistance = scan["crop:resistance"]
 end
 
 function checkAndRecharge()
-    if computer.energy() < computer.maxEnergy() * 0.5 then
-        safeBack()
-        safeBack()
-        while computer.energy() < computer.maxEnergy() * 0.98 do
-            os.sleep(1)
-        end
-        safeForward()
-        safeForward()
+  if computer.energy() < computer.maxEnergy() * 0.5 then
+    safeBack()
+    safeBack()
+    while computer.energy() < computer.maxEnergy() * 0.98 do
+      os.sleep(1)
     end
+    safeForward()
+    safeForward()
+  end
 end
 
 function checkForNewCrop()
-    scan = component.geolyzer.analyze(sides.down)
+  scan = component.geolyzer.analyze(sides.down)
 
-    name = scan["crop:name"]
-    
-    if name == nil then
-        return
-    end
-    if name == "weed" then
-        robot.useDown()
-        useItemInSlot(1)
-        return
-    end
+  name = scan["crop:name"]
 
-    newStats = {growth=scan["crop:growth"],gain=scan["crop:gain"],resistance=scan["crop:resistance"]}
-    relativeValue = newStats.growth - parentStats.growth
-    relativeValue = relativeValue + newStats.gain - parentStats.gain
-    relativeValue = relativeValue - newStats.resistance + parentStats.resistance
+  if name == nil then
+      return
+  end
+  if name == "weed" then
+    robot.useDown()
+    useItemInSlot(1)
+    return
+  end
 
-    if name == parentName and relativeValue > 0 then --replace with new superior parent
-        parentStats = newStats
-        useItemInSlot(2)
-        safeBack()
-        robot.breakDown()
-        useItemInSlot(2)
-        safeForward()
-        useItemInSlot(1)
-        useItemInSlot(1)
-    else
-        robot.useDown()
-        useItemInSlot(1)
-    end
+  newStats = {growth=scan["crop:growth"],gain=scan["crop:gain"],resistance=scan["crop:resistance"]}
+  relativeValue = newStats.growth - parentStats.growth
+  relativeValue = relativeValue + newStats.gain - parentStats.gain
+  relativeValue = relativeValue - newStats.resistance + parentStats.resistance
+
+  if name == parentName and relativeValue > 0 then --replace with new superior parent
+    parentStats = newStats
+    useItemInSlot(2)
+    safeBack()
+    robot.swingDown()
+    useItemInSlot(2)
+    safeForward()
+    useItemInSlot(1)
+    useItemInSlot(1)
+  else
+    robot.useDown()
+    useItemInSlot(1)
+  end
+end
+
+function checkForInvClear()
+  inventory.getStackInInternalSlot(16)
+  if stack ~= nil then
+    clearInventory(3)
+  end
+end
+
+function clearInventory(minSlot)
+  for i = minSlot, 16 do
+    robot.select(i)
+    robot.dropUp()
+  end
 end
 
 function singlePass()
   checkForNewCrop()
   checkAndRecharge()
+  checkForInvClear()
 end
 
 
