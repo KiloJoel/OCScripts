@@ -36,7 +36,7 @@ function checkInitialParent()
   scan = component.geolyzer.analyze(sides.down)
   parentName = scan["crop:name"]
   parentStats.growth = scan["crop:growth"]
-  parentStats.gain = scan["crop:growth"]
+  parentStats.gain = scan["crop:gain"]
   parentStats.resistance = scan["crop:resistance"]
 end
 
