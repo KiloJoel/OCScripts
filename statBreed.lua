@@ -7,8 +7,7 @@ inventory = component.inventory_controller
 
 parentName = "reed"
 parentStats = {growth=0,gain=0,resistance=31}
-invClearCounter = 0
-
+keepRunning = true
 
 function safeMove(move)
   response = move()
@@ -41,18 +40,6 @@ function checkInitialParent()
   parentStats.resistance = scan["crop:resistance"]
 end
 
-function checkAndRecharge()
-  if computer.energy() < computer.maxEnergy() * 0.5 then
-    safeBack()
-    safeBack()
-    while computer.energy() < computer.maxEnergy() * 0.98 do
-      os.sleep(1)
-    end
-    safeForward()
-    safeForward()
-  end
-end
-
 function checkForNewCrop()
   scan = component.geolyzer.analyze(sides.down)
 
@@ -72,7 +59,11 @@ function checkForNewCrop()
   relativeValue = relativeValue + newStats.gain - parentStats.gain
   relativeValue = relativeValue - newStats.resistance + parentStats.resistance
 
+
   if name == parentName and relativeValue > 0 then --replace with new superior parent
+    if newStats == {31,31,0} then --objective achieved
+      keepRunning = false;
+    end
     parentStats = newStats
     useItemInSlot(2)
     safeBack()
@@ -88,7 +79,7 @@ function checkForNewCrop()
 end
 
 function checkForInvClear()
-  inventory.getStackInInternalSlot(16)
+  stack = inventory.getStackInInternalSlot(12)
   if stack ~= nil then
     clearInventory(3)
   end
@@ -101,17 +92,36 @@ function clearInventory(minSlot)
   end
 end
 
+function checkSticks()
+  count = robot.count(1)
+  if count < 32 then
+    robot.select(1)
+    robot.turnLeft()
+    robot.suck(64-count)
+    robot.turnRight()
+    if robot.count() ~= 64 then --stop program if out of cropsticks
+      keepRunning = false
+    end
+  end
+end
+
 function singlePass()
   checkForNewCrop()
-  checkAndRecharge()
   checkForInvClear()
+  checkSticks()
 end
 
 
+robot.back()
 checkInitialParent()
 safeForward()
+checkSticks()
+useItemInSlot(1) --place crossing sticks
+useItemInSlot(1)
 
-while true do
+while keepRunning do
   singlePass()
   os.sleep(2)
 end
+
+robot.swingDown() --remove sticks to prevent weeds
