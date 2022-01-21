@@ -10,7 +10,6 @@ tolerance = 5
 parentName = ""
 parentStats = {growth=0,gain=0,resistance=31}
 parent = nil
-keepRunning = true
 state = 1 --1 breeding for stat, 2 propogating, 3 ending
 
 
@@ -30,11 +29,19 @@ function safeBack()
   safeMove(robot.back)
 end
 
-function useItemInSlot(slotNum)
+function useItem(slotNum, sneaky)
   robot.select(slotNum)
   inventory.equip()
-  robot.useDown()
+  robot.useDown(nil, sneaky)
   inventory.equip()
+end
+
+function useItemInSlot(slotNum)
+  useItem(slotNum, false)
+end
+
+function useItemInSlotWithSneak(slotNum)
+  useItem(slotNum, true)
 end
 
 function checkInitialParent()
@@ -64,6 +71,10 @@ end
 function checkCropStick()
   scan = component.geolyzer.analyze(sides.down)
 
+  if (scan.name ~= "IC2:blockCrop") then
+    state = 3
+    return nil
+  end
   if (getCropName(scan) == nil) then
     return nil
   end
@@ -81,21 +92,23 @@ function tryToReplaceParent(name, value)
       state = 2;
     end
     parent = scan
-    useItemInSlot(2)
+    useItemInSlotWithSneak(2)
     safeBack()
     robot.swingDown()
     useItemInSlot(2)
     safeForward()
     useItemInSlot(1)
     useItemInSlot(1)
+    return true
   else
     clearAndReplaceStick()
+    return false
   end
 end
 
 function tryToGrowCrop(name, value)
   if (name == getCropName(parent) and value + tolerance >= 62) then
-    useItemInSlot(2)
+    useItemInSlotWithSneak(2)
     safeForward()
     safeForward()
 
@@ -125,9 +138,11 @@ function checkForNewCrop()
   newCropValue = calculateCropValue(scan)
   newCropName = getCropName(scan)
 
+  success = false
   if (state == 1) then
-    tryToReplaceParent(newCropName, newCropValue)
-  else
+    success = tryToReplaceParent(newCropName, newCropValue)
+  end
+  if not success then
     tryToGrowCrop(newCropName, newCropValue)
   end
 end
@@ -154,7 +169,7 @@ function checkSticks()
     robot.suck(64-count)
     robot.turnRight()
     if robot.count() ~= 64 then --stop program if out of cropsticks
-      keepRunning = false
+      state = 3
     end
   end
 end
