@@ -5,9 +5,14 @@ sides = require("sides")
 inventory = component.inventory_controller
 
 
-parentName = "reed"
+tolerance = 5
+
+parentName = ""
 parentStats = {growth=0,gain=0,resistance=31}
+parent = nil
 keepRunning = true
+state = 1 --1 breeding for stat, 2 propogating, 3 ending
+
 
 function safeMove(move)
   response = move()
@@ -33,38 +38,49 @@ function useItemInSlot(slotNum)
 end
 
 function checkInitialParent()
-  scan = component.geolyzer.analyze(sides.down)
-  parentName = scan["crop:name"]
-  parentStats.growth = scan["crop:growth"]
-  parentStats.gain = scan["crop:gain"]
-  parentStats.resistance = scan["crop:resistance"]
+  parent = component.geolyzer.analyze(sides.down)
+  if (calculateCropValue(parent) == 62) then
+    state = 2
+  end
 end
 
-function checkForNewCrop()
+function calculateCropValue(scan)
+  return scan["crop:growth"] + scan["crop:gain"] - scan["crop:resistance"]
+end
+
+function getCropName(scan)
+  return scan["crop:name"]
+end
+
+function isWeed(scan)
+  return getCropName(scan) == "weed"
+end
+
+function clearAndReplaceStick()
+  robot.useDown()
+  useItemInSlot(1)
+end
+
+function checkCropStick()
   scan = component.geolyzer.analyze(sides.down)
 
-  name = scan["crop:name"]
-
-  if name == nil then
-      return
+  if (getCropName(scan) == nil) then
+    return nil
   end
-  if name == "weed" then
-    robot.useDown()
-    useItemInSlot(1)
-    return
+  if (isWeed(scan)) then
+    clearAndReplaceStick()
+    return nil
   end
 
-  newStats = {growth=scan["crop:growth"],gain=scan["crop:gain"],resistance=scan["crop:resistance"]}
-  relativeValue = newStats.growth - parentStats.growth
-  relativeValue = relativeValue + newStats.gain - parentStats.gain
-  relativeValue = relativeValue - newStats.resistance + parentStats.resistance
+  return scan
+end
 
-
-  if name == parentName and relativeValue > 0 then --replace with new superior parent
-    if newStats == {31,31,0} then --objective achieved
-      keepRunning = false;
+function tryToReplaceParent(name, value)
+  if name == getCropName(parent) and value > calculateCropValue(parent) then
+    if newCropValue == 62 then --objective achieved
+      state = 2;
     end
-    parentStats = newStats
+    parent = scan
     useItemInSlot(2)
     safeBack()
     robot.swingDown()
@@ -73,8 +89,46 @@ function checkForNewCrop()
     useItemInSlot(1)
     useItemInSlot(1)
   else
-    robot.useDown()
+    clearAndReplaceStick()
+  end
+end
+
+function tryToGrowCrop(name, value)
+  if (name == getCropName(parent) and value + tolerance >= 62) then
+    useItemInSlot(2)
+    safeForward()
+    safeForward()
+
+    growing = component.geolyzer.analyze(sides.down)
+    while (growing["crop:size"] ~= growing["crop:maxSize"]) do
+      os.sleep(2)
+      growing = component.geolyzer.analyze(sides.down)
+    end
+
+    robot.swingDown()
+    useItemInSlot(2)
+    safeBack()
+    safeBack()
     useItemInSlot(1)
+    useItemInSlot(1)
+  else
+    clearAndReplaceStick()
+  end
+end
+
+function checkForNewCrop()
+  scan = checkCropStick()
+  if scan == nil then
+    return
+  end
+
+  newCropValue = calculateCropValue(scan)
+  newCropName = getCropName(scan)
+
+  if (state == 1) then
+    tryToReplaceParent(newCropName, newCropValue)
+  else
+    tryToGrowCrop(newCropName, newCropValue)
   end
 end
 
@@ -119,7 +173,7 @@ checkSticks()
 useItemInSlot(1) --place crossing sticks
 useItemInSlot(1)
 
-while keepRunning do
+while state < 3 do
   singlePass()
   os.sleep(2)
 end
