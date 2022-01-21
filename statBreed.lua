@@ -87,7 +87,8 @@ function checkCropStick()
 end
 
 function tryToReplaceParent(name, value)
-  if name == getCropName(parent) and value > calculateCropValue(parent) then
+  isBetter = name == getCropName(parent) and value > calculateCropValue(parent)
+  if isBetter then
     if newCropValue == 62 then --objective achieved
       state = 2;
     end
@@ -100,14 +101,14 @@ function tryToReplaceParent(name, value)
     useItemInSlot(1)
     useItemInSlot(1)
     return true
-  else
-    clearAndReplaceStick()
-    return false
   end
+
+  return isBetter
 end
 
 function tryToGrowCrop(name, value)
-  if (name == getCropName(parent) and value + tolerance >= 62) then
+  isGood = name == getCropName(parent) and value + tolerance >= 62
+  if isGood then
     useItemInSlotWithSneak(2)
     safeForward()
     safeForward()
@@ -124,9 +125,9 @@ function tryToGrowCrop(name, value)
     safeBack()
     useItemInSlot(1)
     useItemInSlot(1)
-  else
-    clearAndReplaceStick()
   end
+
+  return isGood
 end
 
 function checkForNewCrop()
@@ -143,7 +144,10 @@ function checkForNewCrop()
     success = tryToReplaceParent(newCropName, newCropValue)
   end
   if not success then
-    tryToGrowCrop(newCropName, newCropValue)
+    success = tryToGrowCrop(newCropName, newCropValue)
+  end
+  if not success then
+    clearAndReplaceStick()
   end
 end
 
