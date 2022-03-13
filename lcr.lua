@@ -20,14 +20,14 @@ function determineSides()
     inputSide = 5
   else
     inputSide = 4
-  end  
-end  
+  end
+end
 
 function waitForInput()
   found = false
   while not found do
     stack = transposer.getStackInSlot(inputSide, 1)
-    if stack and stack.label == "Redstone Torch" then
+    if stack and stack.name == "minecraft:redstone_torch" then
       found = true
     end
   end
@@ -40,7 +40,7 @@ function insertItems()
   for i = 2, size do
     stack = transposer.getStackInSlot(inputSide, i)
     if stack then
-      if stack.label:match(" Cell$") then
+      if stack.name == "IC2:itemCellEmpty" or stack.fluid_name or stack.name:match("^miscutils:itemCell") then
         transposer.transferItem(inputSide, stagingSide, 64, i, stagingSlot)
         stagingSlot = stagingSlot + 1
       else
@@ -65,7 +65,7 @@ function inventoryEmpty(side, ignoreCircuits)
   size = transposer.getInventorySize(side)
   for i = 1, size do
     stack = transposer.getStackInSlot(side, i)
-    if stack and (stack.label ~= "Programmed Circuit" or not ignoreCircuits) then
+    if stack and (stack.name ~= "gregtech:gt.integrated_circuit" or not ignoreCircuits) then
       return false
     end
   end
@@ -75,7 +75,7 @@ end
 function fluidHatchesEmpty()
   isEmpty = true
   for i = 1, 3 do
-    computer.pullSignal(0.33)
+    computer.pullSignal(0.5)
     input = redstone.getInput(fluidInHatchesSide)
     isEmpty = isEmpty and input == 0
   end
