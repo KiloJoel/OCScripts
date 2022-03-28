@@ -83,8 +83,6 @@ function insertItems()
       end
     end
   end
-
-  redstone.setOutput(addCellsSide, 15)
 end
 
 function waitForEmptyInventory(side)
@@ -96,10 +94,12 @@ end
 
 function isInventoryEmpty(side, ignoreCircuits)
   size = transposer.getInventorySize(side)
-  for i = 1, size do
-    stack = transposer.getStackInSlot(side, i)
-    if stack and (stack.name ~= "gregtech:gt.integrated_circuit" or not ignoreCircuits) then
-      return false
+  if size then
+    for i = 1, size do
+      stack = transposer.getStackInSlot(side, i)
+      if stack and (stack.name ~= "gregtech:gt.integrated_circuit" or not ignoreCircuits) then
+        return false
+      end
     end
   end
   return true
@@ -124,11 +124,13 @@ function waitForLCR()
   done = false
   while not done do
     done = isInventoryEmpty(hatchSide, true) and fluidHatchesEmpty()
+    for i = 1, numberOutputSides do
+      done = done and isInventoryEmpty(cellOutputSides[i], false)
+    end
   end
 end
 
 function finishUp()
-  redstone.setOutput(addCellsSide, 0)
   transposer.transferItem(hatchSide, stagingSide, 1, 1, 1)
   transposer.transferItem(inputSide, stagingSide, 1, 1, 2)
   waitForEmptyInventory(stagingSide, false)
