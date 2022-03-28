@@ -47,8 +47,9 @@ end
 function waitForInput()
   found = false
   while not found do
+    computer.pullSignal(0.25)
     stack = transposer.getStackInSlot(inputSide, 1)
-    if stack and stack.name == "minecraft:redstone_torch" then
+    if stack then --and stack.name == "minecraft:redstone_torch" then
       found = true
     end
   end
@@ -58,9 +59,11 @@ function insertItems()
   stagingSlot = 1
   hatchSlot = 1
   size = transposer.getInventorySize(inputSide)
+  --Placeholder to chest
+  transposer.transferItem(hatchSide, inputSide, 64, 1, size)
   cellOutputsTable = {}
   cellOutputSidesIndex = 1
-  for i = 2, size do
+  for i = 1, size - 1 do
     stack = transposer.getStackInSlot(inputSide, i)
     if stack then
       if stack.name == "IC2:itemCellEmpty" then
@@ -88,6 +91,7 @@ end
 function waitForEmptyInventory(side)
   done = false
   while not done do
+    computer.pullSignal(0.25)
     done = isInventoryEmpty(side, false)
   end
 end
@@ -132,7 +136,8 @@ end
 
 function finishUp()
   transposer.transferItem(hatchSide, stagingSide, 1, 1, 1)
-  transposer.transferItem(inputSide, stagingSide, 1, 1, 2)
+  --Placeholder into hatch
+  transposer.transferItem(inputSide, hatchSide, 64, transposer.getInventorySize(inputSide), 1)
   waitForEmptyInventory(stagingSide, false)
 end
 
